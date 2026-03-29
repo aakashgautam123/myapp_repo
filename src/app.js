@@ -1,6 +1,10 @@
 const express = require("express");
 const app = express();
 
+app.get("/", (req, res) =>{
+  res.send("Welcome to the Continuous Integration/Deployment");
+});
+
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
