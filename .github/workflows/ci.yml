@@ -45,7 +45,7 @@ jobs:
       - name: Push Docker image
         run: docker push aakashgautam123/myapp:latest
 
-      -name: Deploy to Amanzon ec2 instance
+      - name: Deploy to Amanzon ec2 instance
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
