@@ -55,10 +55,56 @@ jobs:
             echo "${{ secrets.DOCKER_PASS }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
             docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
             
-            docker stop app || true
-            docker rm app || true
+            BLUE="app_blue"
+            GREEN="app_green"
+
+            #Determine which container is currently live
+            if [ "$(docker ps -q -f name=$BLUE)" ]; then
+              LIVE=$BLUE
+              NEW=$GREEN
+            else
+              LIVE=$GREEN
+              NEW=$BLUE
+            fi
+
+            #Assign ports for new container
+            if [ "$NEW" = "$BLUE" ]; then
+              NEW_PORT=3000
+            else
+              NEW_PORT=3001
+
+            fi
             
             docker run -d \
-              --name app \
-              -p 80:3000 \
+              --name $NEW \
+              -p $NEW_PORT:3000 \
               ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+
+            # Wait for health check
+            echo "Waiting for $NEW to become healthy..."
+            MAX_RETRIES=20
+            RETRY_COUNT=0
+            until curl -s -f http://localhost:$NEW_PORT/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+              echo "Waiting for $NEW ($RETRY_COUNT/$MAX_RETRIES)..."
+              sleep 2
+              RETRY_COUNT=$((RETRY_COUNT+1))
+            done
+
+            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+              echo "ERROR: $NEW failed health check. Aborting deployment."
+              docker stop $NEW
+              docker rm $NEW
+              exit 1
+            fi
+            sed -i "s/server 127.0.0.1:[0-9]\+/server 127.0.0.1:$NEW_PORT/" /home/ubuntu/nginx/nginx.conf
+
+            docker exec nginx nginx -s reload
+
+            echo "Nginx reloaded, traffic switched to $NEW on port $NEW_PORT."
+
+            # Stop the old container
+            if [ "$(docker ps -q -f name=$LIVE)" ]; then
+              echo "Stopping old container $LIVE..."
+              docker stop $LIVE
+              docker rm $LIVE
+            fi
