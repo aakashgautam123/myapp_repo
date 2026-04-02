@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 
 app.get("/", (req, res) =>{
-  res.send("Welcome to the Continuous Integration/Deployment");
+  res.send("Welcome to the Continuous Integration/Deployment with zero downtime");
 });
 
 app.get("/health", (req, res) => {
