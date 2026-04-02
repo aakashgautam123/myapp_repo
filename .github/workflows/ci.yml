@@ -56,7 +56,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
             NETWORK="app_network"
             docker network create -d bridge $NETWORK || true
-            docker network connect app-network nginx || true
+            docker network connect app_network nginx || true
             BLUE="app_blue"
             GREEN="app_green"
 
