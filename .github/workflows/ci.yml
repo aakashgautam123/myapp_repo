@@ -78,7 +78,6 @@ jobs:
             fi
             
             docker run -d \
-              --network $NETWORK \
               --name $NEW \
               -p $NEW_PORT:3000 \
               ${{ secrets.DOCKER_USERNAME }}/myapp:latest
@@ -99,12 +98,15 @@ jobs:
               docker rm $NEW
               exit 1
             fi
-            sed -i "s/server \(app_blue\|app_green\):3000;/server $NEW:3000;/" /home/ubuntu/nginx/nginx.conf
+            
+            
+            docker network connect --alias app app_network $NEW
+            docker network disconnect app_network $LIVE
 
 
-            docker exec nginx nginx -s reload
+            
 
-            echo "Nginx reloaded, traffic switched to $NEW on port $NEW_PORT."
+            echo "alias app changed to $NEW".
 
             # Stop the old container
             if [ "$(docker ps -q -f name=$LIVE)" ]; then
