@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 
 app.get("/", (req, res) =>{
-  res.send("totally new with nginx fix");
+  res.send("shreya paudel");
 });
 
 app.get("/health", (req, res) => {
