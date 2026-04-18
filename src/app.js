@@ -3,7 +3,9 @@ const path = require("path");
 
 
 const multer = require('multer');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+const  { getSignedUrl } =  require("@aws-sdk/s3-request-presigner");
+
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
@@ -12,6 +14,9 @@ const s3 = new S3Client({ region: 'ap-south-1' }); // change if needed
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+app.get('/images', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'images.html'));
 });
 
 app.get("/health", (req, res) => {
@@ -44,7 +49,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     await s3.send(new PutObjectCommand(params));
 
-    const fileUrl = `https://${params.Bucket}.s3.amazonaws.com/${params.Key}`;
+    const fileUrl = `https://dedbl11jcbpwn.cloudfront.net/${params.Key}`;
 
     res.json({
       message: 'Upload successful',
@@ -57,6 +62,39 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+app.get("/api/images", async (req, res) => {
+  try {
+    const data = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: "software-s3-bucket",
+      })
+    );
+
+    const images = await Promise.all(
+      (data.Contents || []).map(async (item) => {
+        const command = new GetObjectCommand({
+          Bucket: "software-s3-bucket",
+          Key: item.Key,
+        });
+
+        // const url = await getSignedUrl(s3, command, {
+        //   expiresIn: 3600,
+        // });
+        const url = `https://dedbl11jcbpwn.cloudfront.net/${item.Key}`
+
+        return {
+          key: item.Key,
+          url,
+        };
+      })
+    );
+
+    res.json(images);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch images" });
+  }
+});
 
 
 module.exports = app;
